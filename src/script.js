@@ -3,6 +3,7 @@ import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import * as dat from "lil-gui";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
+import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader.js";
 
 /**
  * Base
@@ -19,11 +20,33 @@ const scene = new THREE.Scene();
 /**
  * Models
  */
-const gltfLoader = new GLTFLoader();
+// Instantiate draco loader before gltf loader.
+const dracoLoader = new DRACOLoader();
+dracoLoader.setDecoderPath("/draco/");
 
-// .load method parameters: (Path, success callback, progress callback, error callback)
-gltfLoader.load("/models/Duck/glTF/Duck.gltf", (gltf) => {
-	console.log("success");
+const gltfLoader = new GLTFLoader();
+// This method drastically reduces the size but only use this method on big size models.
+gltfLoader.setDRACOLoader(dracoLoader);
+
+let mixer = null;
+
+// .load method parameters: (Path, success callback).
+gltfLoader.load("/models/Fox/glTF/Fox.gltf", (gltf) => {
+	// // Use the spread operator [...] to copy the part of the array you wanted in a new variable (children)
+	// const children = [...gltf.scene.children];
+	// // Use a for of loop in the variable and then add the for of variable (child) to the scene
+	// for (const child of children) {
+	// 	scene.add(child);
+	// }
+
+	mixer = new THREE.AnimationMixer(gltf.scene);
+	const action = mixer.clipAction(gltf.animations[2]);
+
+	action.play();
+
+	gltf.scene.scale.set(0.025, 0.025, 0.025);
+	// The simplest way to load multiple meshes!! Don't use the for of method!
+	scene.add(gltf.scene);
 });
 
 /**
@@ -119,6 +142,11 @@ const tick = () => {
 	const elapsedTime = clock.getElapsedTime();
 	const deltaTime = elapsedTime - previousTime;
 	previousTime = elapsedTime;
+
+	// Update mixer
+	if (mixer !== null) {
+		mixer.update(deltaTime);
+	}
 
 	// Update controls
 	controls.update();
